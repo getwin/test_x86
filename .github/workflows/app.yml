@@ -1,0 +1,141 @@
+
+name: 编译
+
+on:
+  push:
+    branches: 
+      - master
+  release:
+      types: [published]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 校验本地文件
+        uses: actions/checkout@master
+        with:
+          ref: master
+
+      - name: 更新软件列表
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          sudo -E apt-get update
+      - name: 安装编译环境
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          sudo -E apt-get -y install wget build-essential asciidoc binutils bzip2 gawk gettext git libncurses5-dev libz-dev patch unzip zlib1g-dev lib32gcc1 libc6-dev-i386 subversion flex uglifyjs git-core gcc-multilib p7zip p7zip-full msmtp libssl-dev texinfo libglib2.0-dev xmlto qemu-utils upx libelf-dev autoconf automake libtool autopoint device-tree-compiler
+
+      - name: 下载SDK
+        env:
+          SDK_NAME: openwrt-sdk-19.07.0-rc2-x86-64_gcc-7.5.0_musl.Linux-x86_64
+          SDK_URL: https://downloads.openwrt.org/releases/19.07.0-rc2/targets/x86/64/
+        run: |
+          wget -q --no-check-certificate ${SDK_URL}/${SDK_NAME}.tar.xz
+          xz -d ${SDK_NAME}.tar.xz
+          tar -xf ${SDK_NAME}.tar
+          mv $SDK_NAME openwrt
+
+      - name: 构建自定义文件结构
+        run: |
+          cd openwrt
+
+          # KMS
+          git clone https://github.com/flytosky-f/openwrt-vlmcsd package/vlmcsd
+          # git clone https://github.com/flytosky-f/luci-app-vlmcsd package/luci-app-vlmcsd
+          svn checkout https://github.com/coolsnowwolf/lede/trunk/package/lean/luci-app-vlmcsd package/luci-app-vlmcsd
+
+          # udp2raw-tunnel
+          git clone https://github.com/qq523407234/openwrt-udp2raw package/udp2raw-tunnel
+          git clone https://github.com/qq523407234/luci-app-udp2raw package/luci-app-udp2raw
+
+          # v2ray
+          git clone https://github.com/kuoruan/openwrt-v2ray package/v2ray-core
+          git clone https://github.com/kuoruan/luci-app-v2ray package/luci-app-v2ray
+          # upx压缩等级改为速度最优的 compress faster
+          sed -i 's/--ultra-brute/-1/g' package/v2ray-core/Makefile
+
+          # OpenAppFilter
+          git clone https://github.com/destan19/OpenAppFilter package/OpenAppFilter
+
+          # smartdns
+          svn checkout https://github.com/pymumu/smartdns/trunk/package/openwrt package/smartdns
+          sed -i 's/d51f5e6eeba7bfde1b108fe32d540bd429550573/d6c34658af0d4aac94655a139030c5ec12884754/g' package/smartdns/Makefile
+          sed -i 's/1\.2019\.11\.02-1102/1.2019.12.15-28/g' package/smartdns/Makefile
+
+      - name: 构建编译扩展环境
+        run: |
+          cd openwrt
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+
+      - name: 插件选择
+        run: |
+          cd openwrt
+          rm -f ./.config*
+          touch ./.config
+
+          cat >> .config <<EOF
+          CONFIG_PACKAGE_luci-app-vlmcsd=y
+          CONFIG_PACKAGE_luci-app-oaf=y
+          CONFIG_PACKAGE_smartdns=y
+          CONFIG_PACKAGE_udp2raw-tunnel=y
+          CONFIG_PACKAGE_luci-app-udp2raw=y
+          CONFIG_PACKAGE_luci-app-v2ray=y
+          CONFIG_PACKAGE_v2ray-core=y
+          #
+          # V2Ray Configuration
+          #
+          # CONFIG_V2RAY_JSON_V2CTL is not set
+          CONFIG_V2RAY_JSON_INTERNAL=y
+          # CONFIG_V2RAY_JSON_NONE is not set
+          CONFIG_V2RAY_EXCLUDE_V2CTL=y
+          CONFIG_V2RAY_EXCLUDE_ASSETS=y
+          CONFIG_V2RAY_COMPRESS_UPX=y
+          EOF
+
+          sed -i 's/^[ \t]*//g' ./.config
+          make defconfig
+
+      - name: 进行编译-1
+        run: |
+          cd openwrt
+          make package/vlmcsd/compile -j$(nproc) V=s
+          make package/luci-app-vlmcsd/compile -j$(nproc) V=s
+
+      - name: 进行编译-2
+        run: |
+          cd openwrt
+          make package/udp2raw-tunnel/compile -j$(nproc) V=s
+          make package/luci-app-udp2raw/compile -j$(nproc) V=s
+
+      - name: 进行编译-3
+        run: |
+          cd openwrt
+          make package/luci-app-oaf/compile -j$(nproc) V=s
+
+      - name: 进行编译-4
+        run: |
+          cd openwrt
+          make package/smartdns/compile -j$(nproc) V=s
+
+      - name: 进行编译-5
+        run: |
+          cd openwrt   
+          make package/v2ray-core/compile -j$(nproc) V=s
+          make package/luci-app-v2ray/compile -j$(nproc) V=s
+
+
+      - name: 简单清理
+        run: |
+          cd openwrt/bin
+          find . -name '*firmware*' | xargs rm
+
+      - name : 上传
+        uses: actions/upload-artifact@master
+        with:
+          name: openWrt-app
+          path: openwrt/bin
