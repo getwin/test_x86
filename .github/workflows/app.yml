@@ -125,6 +125,7 @@ jobs:
         run: |
           cd openwrt
           make package/smartdns/compile -j$(nproc) V=s
+          make package/luci-app-smartdns/compile -j$(nproc) V=s
 
       # - name: 进行编译-5
       #   run: |
