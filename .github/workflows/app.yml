@@ -133,10 +133,10 @@ jobs:
       #     make package/luci-app-v2ray/compile -j$(nproc) V=s
 
 
-      - name: 简单清理
-        run: |
-          cd openwrt/bin
-          find . -name '*firmware*' | xargs rm
+      # - name: 简单清理
+      #   run: |
+      #     cd openwrt/bin
+      #     find . -name '*firmware*' | xargs rm
 
       - name : 上传
         uses: actions/upload-artifact@master
