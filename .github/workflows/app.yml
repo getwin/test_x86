@@ -68,16 +68,7 @@ jobs:
           # git clone https://github.com/coolexa/luci-app-smartdns package/luci-app-smartdns
 
           # trojan
-          git clone https://github.com/trojan-gfw/openwrt-trojan package/openwrt-trojan
-          #     Boost_DEBUG
-          sed -i 's/DEBUG=ON/DEBUG=OFF/g' package/openwrt-trojan/trojan/Makefile
-          #     OPENSSL_USE_STATIC_LIBS
-          # sed -i 's/LIBS=TRUE/LIBS=FALSE/g' package/openwrt-trojan/trojan/Makefile
-          #     bump to 1.14.0
-          sed -i 's/1\.13\.0/1.14.0/g' package/openwrt-trojan/trojan/Makefile
-          sed -i 's/842ad5bb07eb8bce035fb274571e586629a97c99/18763b7529963efef8dcb01f50389a6f49213ae1/g' package/openwrt-trojan/trojan/Makefile
-          #     fix openssl-version.patch
-          sed -i 's/1\.0\.2/1.1.0/g' package/openwrt-trojan/trojan/patches/001-force-openssl-version.patch
+          git clone https://github.com/coolexa/openwrt-trojan package/openwrt-trojan
 
       - name: 构建编译扩展环境
         run: |
@@ -116,7 +107,6 @@ jobs:
           # EOF
 
           cat >> .config <<EOF
-          CONFIG_PACKAGE_libopenssl1.1=m
           CONFIG_PACKAGE_trojan=m
           EOF
 
