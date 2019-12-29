@@ -47,29 +47,43 @@ jobs:
           # git clone https://github.com/flytosky-f/openwrt-vlmcsd package/vlmcsd
           # # git clone https://github.com/flytosky-f/luci-app-vlmcsd package/luci-app-vlmcsd
           # svn checkout https://github.com/coolsnowwolf/lede/trunk/package/lean/luci-app-vlmcsd package/luci-app-vlmcsd
-          
+
           # # udp2raw-tunnel
           # git clone https://github.com/qq523407234/openwrt-udp2raw package/udp2raw-tunnel
           # git clone https://github.com/qq523407234/luci-app-udp2raw package/luci-app-udp2raw
-          
+
           # # v2ray
-          # git clone https://github.com/kuoruan/openwrt-v2ray package/v2ray-core
+          # git clone --branch v4.20.0-4 https://github.com/kuoruan/openwrt-v2ray package/v2ray-core
           # git clone https://github.com/kuoruan/luci-app-v2ray package/luci-app-v2ray
           # # upx压缩等级改为速度最优的 compress faster
           # sed -i 's/--ultra-brute/-1/g' package/v2ray-core/Makefile
+          # # bug fix
+          # sed -i 's/mv -f $(DL_DIR)\/$(GEO/#mv -f $(DL_DIR)\/$(GEO/g' package/v2ray-core/Makefile
 
           # # OpenAppFilter
           # git clone https://github.com/destan19/OpenAppFilter package/OpenAppFilter
-          
-          # smartdns
-          svn checkout https://github.com/coolexa/smartdns/trunk/package/openwrt package/smartdns
-          git clone https://github.com/pymumu/luci-app-smartdns package/luci-app-smartdns
+
+          # # smartdns
+          # svn checkout https://github.com/coolexa/smartdns-lite/trunk/package/openwrt package/smartdns
+          # git clone https://github.com/coolexa/luci-app-smartdns package/luci-app-smartdns
+
+          # trojan
+          git clone https://github.com/trojan-gfw/openwrt-trojan package/openwrt-trojan
+          #     Boost_DEBUG
+          sed -i 's/DEBUG=ON/DEBUG=OFF/g' package/openwrt-trojan/trojan/Makefile
+          #     OPENSSL_USE_STATIC_LIBS
+          # sed -i 's/LIBS=TRUE/LIBS=FALSE/g' package/openwrt-trojan/trojan/Makefile
+          #     bump to 1.14.0
+          sed -i 's/1\.13\.0/1.14.0/g' package/openwrt-trojan/trojan/Makefile
+          sed -i 's/842ad5bb07eb8bce035fb274571e586629a97c99/18763b7529963efef8dcb01f50389a6f49213ae1/g' package/openwrt-trojan/trojan/Makefile
+          #     fix openssl-version.patch
+          sed -i 's/1\.0\.2/1.1.0/g' package/openwrt-trojan/trojan/patches/001-force-openssl-version.patch
 
       - name: 构建编译扩展环境
         run: |
           cd openwrt
-          ./scripts/feeds update -a
-          ./scripts/feeds install -a
+          ./scripts/feeds update -a >/dev/null
+          ./scripts/feeds install -a >/dev/null
 
       - name: 插件选择
         run: |
@@ -83,6 +97,11 @@ jobs:
           # CONFIG_PACKAGE_smartdns=y
           # CONFIG_PACKAGE_udp2raw-tunnel=y
           # CONFIG_PACKAGE_luci-app-udp2raw=y
+          # CONFIG_PACKAGE_smartdns=y
+          # CONFIG_PACKAGE_luci-app-smartdns=y
+          # EOF
+
+          # cat >> .config <<EOF
           # CONFIG_PACKAGE_luci-app-v2ray=y
           # CONFIG_PACKAGE_v2ray-core=y
           # #
@@ -97,8 +116,8 @@ jobs:
           # EOF
 
           cat >> .config <<EOF
-          CONFIG_PACKAGE_smartdns=y
-          CONFIG_PACKAGE_luci-app-smartdns=y
+          CONFIG_PACKAGE_libopenssl1.1=m
+          CONFIG_PACKAGE_trojan=m
           EOF
 
           sed -i 's/^[ \t]*//g' ./.config
@@ -121,26 +140,41 @@ jobs:
       #     cd openwrt
       #     make package/luci-app-oaf/compile -j$(nproc) V=s
 
-      - name: 进行编译-4
-        run: |
-          cd openwrt
-          make package/smartdns/compile -j$(nproc) V=s
-          make package/luci-app-smartdns/compile -j$(nproc) V=s
+      # - name: 进行编译-4
+      #   run: |
+      #     cd openwrt
+      #     make package/smartdns/compile -j$(nproc) V=s
+      #     make package/luci-app-smartdns/compile -j$(nproc) V=s
 
       # - name: 进行编译-5
       #   run: |
       #     cd openwrt   
       #     make package/v2ray-core/compile -j$(nproc) V=s
-      #     make package/luci-app-v2ray/compile -j$(nproc) V=s
+      #     # make package/luci-app-v2ray/compile -j$(nproc) V=s
 
+      - name: 进行编译-6
+        run: |
+          cd openwrt   
+          make package/trojan/compile -j$(nproc)
 
       # - name: 简单清理
       #   run: |
       #     cd openwrt/bin
       #     find . -name '*firmware*' | xargs rm
 
-      - name : 上传
+      # - name : 上传
+      #   uses: actions/upload-artifact@master
+      #   with:
+      #     name: openWrt-app
+      #     path: openwrt/bin
+
+      - name: 提取ipk
+        run: |
+          mkdir -p ./ipk/
+          find ./openwrt/bin/ -name "*trojan*.ipk" | xargs -i mv -f {} ./ipk/
+
+      - name : 上传ipk
         uses: actions/upload-artifact@master
         with:
-          name: openWrt-app
-          path: openwrt/bin
+          name: openwrt-ipk
+          path: ipk
