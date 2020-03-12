@@ -68,7 +68,12 @@ jobs:
           # git clone https://github.com/coolexa/luci-app-smartdns package/luci-app-smartdns
 
           # trojan
-          git clone https://github.com/coolexa/openwrt-trojan package/openwrt-trojan
+          # git clone https://github.com/coolexa/openwrt-trojan package/openwrt-trojan
+
+          # luci-app-passwall
+          cat >> feeds.conf.default <<EOF
+          src-git lienol https://github.com/Lienol/openwrt-package
+          EOF
 
       - name: 构建编译扩展环境
         run: |
@@ -106,9 +111,9 @@ jobs:
           # CONFIG_V2RAY_COMPRESS_UPX=y
           # EOF
 
-          cat >> .config <<EOF
-          CONFIG_PACKAGE_trojan=m
-          EOF
+          # cat >> .config <<EOF
+          # CONFIG_PACKAGE_trojan=m
+          # EOF
 
           sed -i 's/^[ \t]*//g' ./.config
           make defconfig
@@ -142,10 +147,15 @@ jobs:
       #     make package/v2ray-core/compile -j$(nproc) V=s
       #     # make package/luci-app-v2ray/compile -j$(nproc) V=s
 
-      - name: 进行编译-6
+      # - name: 进行编译-6
+      #   run: |
+      #     cd openwrt   
+      #     make package/trojan/compile -j$(nproc)
+
+      - name: 进行编译-7
         run: |
           cd openwrt   
-          make package/trojan/compile -j$(nproc)
+          make package/feeds/lienol/luci-app-passwall/compile -j$(nproc)
 
       # - name: 简单清理
       #   run: |
@@ -161,7 +171,7 @@ jobs:
       - name: 提取ipk
         run: |
           mkdir -p ./ipk/
-          find ./openwrt/bin/ -name "*trojan*.ipk" | xargs -i mv -f {} ./ipk/
+          find ./openwrt/bin/ -name "*passwall*.ipk" | xargs -i mv -f {} ./ipk/
 
       - name : 上传ipk
         uses: actions/upload-artifact@master
