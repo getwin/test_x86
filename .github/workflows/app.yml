@@ -115,6 +115,10 @@ jobs:
           # CONFIG_PACKAGE_trojan=m
           # EOF
 
+          cat >> .config <<EOF
+          CONFIG_PACKAGE_luci-app-passwall=y
+          EOF
+
           sed -i 's/^[ \t]*//g' ./.config
           make defconfig
 
@@ -155,7 +159,7 @@ jobs:
       - name: 进行编译-7
         run: |
           cd openwrt   
-          make package/feeds/lienol/luci-app-passwall/compile -j$(nproc)
+          make package/feeds/lienol/luci-app-passwall/compile -j1 V=s
 
       # - name: 简单清理
       #   run: |
