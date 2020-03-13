@@ -31,8 +31,8 @@ jobs:
 
       - name: 下载SDK
         env:
-          SDK_NAME: openwrt-sdk-19.07.0-rc2-x86-64_gcc-7.5.0_musl.Linux-x86_64
-          SDK_URL: https://downloads.openwrt.org/releases/19.07.0-rc2/targets/x86/64
+          SDK_NAME: openwrt-sdk-19.07.2-x86-64_gcc-7.5.0_musl.Linux-x86_64
+          SDK_URL: https://downloads.openwrt.org/releases/19.07.2/targets/x86/64
         run: |
           wget -q --no-check-certificate ${SDK_URL}/${SDK_NAME}.tar.xz
           xz -d ${SDK_NAME}.tar.xz
@@ -159,7 +159,7 @@ jobs:
       - name: 进行编译-7
         run: |
           cd openwrt   
-          make package/feeds/lienol/luci-app-passwall/compile -j1 V=s
+          make package/feeds/lienol/luci-app-passwall/compile -j$(nproc)
 
       # - name: 简单清理
       #   run: |
@@ -175,7 +175,7 @@ jobs:
       - name: 提取ipk
         run: |
           mkdir -p ./ipk/
-          find ./openwrt/bin/ -name "*passwall*.ipk" | xargs -i mv -f {} ./ipk/
+          find ./openwrt/bin/ -name "*.ipk" | xargs -i mv -f {} ./ipk/
 
       - name : 上传ipk
         uses: actions/upload-artifact@master
